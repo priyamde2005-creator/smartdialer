@@ -8,11 +8,11 @@ Python 3.10+ and the standard library. SQLite is the only datastore. `pytest` is
 
 ```
 pip install -r requirements.txt
-python -m pytest -q              # 46 tests, about 35 seconds
+python -m pytest -q              # 46 tests, about 1-2 minutes (depends on your machine)
 python -m sim.failures           # the five failure cases from the brief, narrated
 python -m sim.simulate --quick   # scenarios A-D, provider trouble, agent drop (about 1 minute)
 python -m sim.simulate           # full run, about 4 minutes. Results are saved in sim/out/
-python -m sim.loadtest           # decision cost, allocation contention, event ingestion
+python -m sim.loadtest           # decision cost, allocation contention, event ingestion (timings vary by machine)
 ```
 
 ## How it fits together
@@ -48,6 +48,9 @@ Where to look:
 
 ## What the simulator shows
 
+The tables below are from the full run (`python -m sim.simulate`, 1500s of virtual time per scenario). `--quick` uses 600s,
+so its numbers differ slightly, and load test timings depend on your machine. The pattern is the same either way.
+
 100 agents, 25 minutes of virtual time, clean carrier. "util" is the share of logged-in agent time spent connected to a
 borrower. Abandon rate is abandoned / answered, counted pessimistically (see DECISIONS).
 
@@ -78,7 +81,8 @@ Things I'd say out loud in an interview rather than hide:
 * The safety layer is deliberately more cautious than the pacing layer, so a large share of decisions are "reduce" or
   "fall back". The abandon rate is the price of the extra utilization, and it is capped, not zero. A strictly zero-abandon
   dialer is the progressive one.
-* The "40 agents vanish" run reports a 5.5% abandon rate. Almost all of that is borrowers who were mid-conversation
+* The "40 agents vanish" run reports a 5.5% abandon rate in the full run (about 10% in `--quick`, because the run is shorter,
+  so the same mid-call drops are divided by fewer answered calls). Almost all of that is borrowers who were mid-conversation
   with an agent whose connection dropped (31 calls). The dialer cannot prevent that, so it is counted but reported
   separately by reason in `python -m sim.failures`.
 
@@ -96,3 +100,8 @@ REST API for the first four and exposes the webhook handler as `Lifecycle.handle
 * Talk time is modelled as memoryless when estimating when agents free up. Real talk times are not, and the
   estimate is conservative on purpose, but it is an approximation.
 * No calling-hours or DND checks, no agent UI, no auth. They belong in the borrower-selection query and are easy to add there.
+
+## Repo hygiene
+
+Add a `.gitignore` with `__pycache__/`, `*.pyc` and `.pytest_cache/` so build artefacts are not committed.
+

@@ -137,3 +137,4 @@ So I'd keep the deterministic part and bound the gamble:
 
 In the simulator that gets 61 percent utilization against 47 percent for progressive at a 20 percent answer rate, 73
 against 61 at 50 percent, and about the same when almost everyone answers, with abandons at or below 3 percent in scenarios A to D. The price is that it is never zero. Zero is progressive.
+

@@ -1,0 +1,47 @@
+
+== 1a. Worker crash right after the carrier accepted the call
+  [crash @after_originate] DB right after the crash: calls=['RESERVED', 'RESERVED', 'RESERVED', 'RESERVED', 'RESERVED'] agents={'RESERVED': 5} carrier holds 1 call(s)
+  after restart + reaper: first call CONNECTED via [('QUEUED', 'RESERVED'), ('RESERVED', 'RINGING'), ('RINGING', 'ANSWERED'), ('ANSWERED', 'CONNECTED')]
+  borrower={'state': 'RESERVED', 'attempts': 0} invariants violated: none
+
+== 1b. Worker crash after reserving, before calling the carrier
+  [crash @after_reserve] DB right after the crash: calls=['RESERVED', 'RESERVED', 'RESERVED', 'RESERVED', 'RESERVED'] agents={'RESERVED': 5} carrier holds 0 call(s)
+  after restart + reaper: first call FAILED via [('QUEUED', 'RESERVED'), ('RESERVED', 'FAILED')]
+  borrower={'state': 'PENDING', 'attempts': 0} invariants violated: none
+
+== 2a. Provider A outage (B available)
+  75 calls were live on A when it died
+  t(s)  A-originates  B-originates  breaker(A)  decision
+    10             0             0  CLOSED     FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    20             0             0  CLOSED     FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    30             0             1  OPEN       REJECT ['capped by safe ceiling 42 (p_safe=0.364, supply_safe=19.42, eps=0.015, abandon_rate=0.0)']
+    40             0            11  OPEN       REDUCE ['capped by safe ceiling 42 (p_safe=0.364, supply_safe=19.42, eps=0.015, abandon_rate=0.0)']
+    50             0            13  OPEN       FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    60             0            21  OPEN       FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    70             0            24  OPEN       FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    80             0            27  OPEN       FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+    90             0            41  OPEN       FALLBACK_PROGRESSIVE ['PROVIDER_DEGRADED']
+  A recovered -> breaker CLOSED; invariants: ok
+
+== 2b. Both providers down
+  new calls started while both providers were down: 6; reasons: {'capped': 168, 'NO_SAFE_CAPACITY': 93, 'PROVIDER_DOWN': 84}
+  after recovery: 132 new calls, agents {'CONNECTED': 12, 'DIALING': 22, 'WRAP_UP': 6}, invariants: ok
+
+== 3a. 40 of 100 agents disconnect
+  explicit disconnect: dialer saw 100->60 agents after 1s; in-flight calls back under the safe ceiling after 1s; shed 54 ringing calls; abandons in the next 60s: 31 (by reason: {'AGENT_LOST_MID_CALL': 31}; mid-call drops are unavoidable, the other buckets are the dialer's own)
+
+== 3b. 40 of 100 agents silently vanish
+  silent network drop (heartbeat timeout): dialer saw 100->60 agents after 7s; in-flight calls back under the safe ceiling after 7s; shed 54 ringing calls; abandons in the next 60s: 29 (by reason: {'AGENT_LOST_MID_CALL': 29}; mid-call drops are unavoidable, the other buckets are the dialer's own)
+
+== 4.  Duplicate events
+  events -> ['APPLIED', 'APPLIED', 'DUPLICATE', 'DUPLICATE', 'DUPLICATE', 'APPLIED', 'DUPLICATE']
+  call transitions (exactly one per state): [('QUEUED', 'RESERVED'), ('RESERVED', 'INITIATED'), ('INITIATED', 'RINGING'), ('RINGING', 'ANSWERED'), ('ANSWERED', 'CONNECTED'), ('CONNECTED', 'COMPLETED')]
+
+== 5.  Out-of-order events
+  COMPLETED,ANSWERED,RINGING     -> ['APPLIED', 'IGNORED_TERMINAL', 'IGNORED_TERMINAL'] final call=COMPLETED agent=AVAILABLE abandoned_flag=1
+  ANSWERED,RINGING,COMPLETED     -> ['APPLIED', 'IGNORED_STALE', 'APPLIED'] final call=COMPLETED agent=WRAP_UP abandoned_flag=0
+  FAILED,ANSWERED                -> ['APPLIED', 'ORPHAN_ANSWER_HANGUP'] final call=FAILED agent=AVAILABLE abandoned_flag=1
+
+== 6.  Worker dies right after ANSWERED
+  after crash mid-ANSWERED: call/agent = ('RINGING', 'DIALING') (txn rolled back, nothing half-applied)
+  redelivered ANSWERED -> APPLIED; COMPLETED -> APPLIED; final COMPLETED / agent WRAP_UP

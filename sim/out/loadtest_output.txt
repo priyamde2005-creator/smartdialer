@@ -1,0 +1,12 @@
+1) Decision cost per tick (pacing + safety math, then the snapshot query) as the campaign grows
+     agents   pacing+safety ms   snapshot SQL ms
+        100              0.326              0.24
+       1000              0.028              0.25
+      10000              0.030              0.78
+     100000              0.033              7.08
+
+2) Allocation under contention: 4 threads, 5000 agents, each grabbing agents+borrowers in 25-call batches
+   reserved 5000 calls in 0.54s = 9,207/s; per-thread [4925, 0, 0, 75]; double-allocations/invariant violations: 0
+
+3) Provider-event ingestion: 3000 calls x 3 events, 25% duplicated, shuffled, 4 threads
+   11250 events in 0.97s = 11,598 events/s; outcomes {'APPLIED': 5475, 'IGNORED_STALE': 511, 'DUPLICATE': 2250, 'IGNORED_TERMINAL': 3014}; invariant violations: 0

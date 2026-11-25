@@ -1,0 +1,30 @@
+== Scenarios (100 agents, 1500s of virtual time, clean provider A) ==
+  mode          util  occup  inited  answrd  connctd  aband  ab.rate  dials/conn
+A            progressive  47.4%  55.1%   3188    626    626     0  0.00%   5.1
+A            predictive   61.3%  71.3%   4381    812    798    14  1.72%   5.5
+               safety decisions: {'FALLBACK_PROGRESSIVE': 881, 'REJECT': 298, 'APPROVE': 109, 'REDUCE': 212, 'shed': 550}  top reasons: {'ABANDON_BUDGET_EXHAUSTED': 868, 'capped': 510, 'NO_SAFE_CAPACITY': 298, 'COLD_START': 13}
+
+B            progressive  61.1%  74.5%   2131   1074   1074     0  0.00%   2.0
+B            predictive   72.6%  88.5%   2585   1299   1276    23  1.77%   2.0
+               safety decisions: {'FALLBACK_PROGRESSIVE': 305, 'REDUCE': 767, 'REJECT': 428}  top reasons: {'capped': 1195, 'NO_SAFE_CAPACITY': 428, 'ABANDON_BUDGET_EXHAUSTED': 294, 'COLD_START': 11}
+
+C            progressive  80.6%  89.1%   1042    726    726     0  0.00%   1.4
+C            predictive   82.9%  91.7%   1094    762    741    21  2.76%   1.5
+               safety decisions: {'FALLBACK_PROGRESSIVE': 1055, 'REDUCE': 215, 'REJECT': 230}  top reasons: {'ABANDON_BUDGET_EXHAUSTED': 1046, 'capped': 445, 'NO_SAFE_CAPACITY': 230, 'COLD_START': 9}
+
+D (changing) progressive  53.6%  64.9%   2696    914    914     0  0.00%   2.9
+D (changing) predictive   62.8%  75.9%   3139   1068   1046    22  2.06%   3.0
+               safety decisions: {'FALLBACK_PROGRESSIVE': 967, 'REJECT': 203, 'APPROVE': 53, 'REDUCE': 277, 'shed': 230}  top reasons: {'ABANDON_BUDGET_EXHAUSTED': 954, 'capped': 480, 'NO_SAFE_CAPACITY': 203, 'COLD_START': 13}
+
+== Same scenario A, but the carrier misbehaves ==
+  mode          util  occup  inited  answrd  connctd  aband  ab.rate  dials/conn
+slow+flaky B only  progressive  43.5%  50.4%   2854    563    562     1  0.18%   5.1   safety={'APPROVE': 1500}
+slow+flaky B only  predictive   52.9%  61.2%   3737    728    710    18  2.47%   5.3   safety={'FALLBACK_PROGRESSIVE': 984, 'REDUCE': 280, 'REJECT': 167, 'APPROVE': 69, 'shed': 256}
+A dies 5-8 min in  progressive  48.4%  55.6%   3039    598    594     4  0.67%   5.1   safety={'APPROVE': 1500}
+A dies 5-8 min in  predictive   53.1%  61.1%   3548    679    660    19  2.80%   5.4   safety={'FALLBACK_PROGRESSIVE': 1114, 'REJECT': 88, 'APPROVE': 64, 'REDUCE': 234, 'shed': 230}
+
+== 40 of 100 agents vanish at t=500s (predictive, scenario B)
+  mode          util  occup  inited  answrd  connctd  aband  ab.rate  dials/conn
+agent drop   predictive   68.3%  83.2%   1840    924    908    51  5.52%   2.0   safety={'FALLBACK_PROGRESSIVE': 759, 'REDUCE': 374, 'REJECT': 367, 'shed': 19}
+
+CSV time series written to /home/claude/smartdialer/sim/out
